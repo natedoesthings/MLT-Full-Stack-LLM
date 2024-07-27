@@ -8,20 +8,19 @@ class SecEdgar:
     self.name_dict = {}
     self.ticker_dict = {}
 
-    headers = {'user-agent': 'MLT NA nathanaeldtesfaye@gmail.com'}
-    r = requests.get(fileurl, headers=headers)
+    self.headers = {'user-agent': 'MLT NA nathanaeldtesfaye@gmail.com'}
+    r = requests.get(fileurl, headers=self.headers)
 
-    self.filejson = r.json()
+    self.file_json = r.json()
 
     print(r.text)
-    print(self.filejson)
+    print(self.file_json)
 
     self.cik_json_to_dict()
 
 
   def cik_json_to_dict(self):
-
-    for _, entry in self.filejson.items():
+    for _, entry in self.file_json.items():
         name = entry['title']
         ticker = entry['ticker']
         cik = entry['cik_str']
@@ -47,59 +46,95 @@ class SecEdgar:
     else:
       print("Ticker not in dictionary")
       return None
+    
+  def annual_filing(self, cik, year):
+    url = f'https://data.sec.gov/submissions/CIK{cik}.json'
+    r = requests.get(url, headers=self.headers)
+
+
+    if r.status_code == 200:
+
+      accessionNumber = None
+      primaryDocument = None
+
+      file_json = r.json()
+      filings = file_json['filings']['recent']
+
+      accessionNumbers = filings['accessionNumber']
+      primaryDocuments = filings['primaryDocument']
+      filingDates = filings['filingDate']
+      forms = filings['form']
+
+      for i in range(len(forms)):
+        if forms[i] == '10-K' and filingDates[i].split('-')[0] == year:
+          accessionNumber = accessionNumbers[i]
+          primaryDocument = primaryDocuments[i]
+          break
+      
+      accessionNumber = accessionNumber.replace('-', '')
+
+      print(f'Accession Number: {accessionNumber}')
+      print(f'Primary Document: {primaryDocument}')
+
+      url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
+
+      print(url)
+
+      r = requests.get(url, headers=self.headers)
+      return r.text
+
+    else:
+      print("Request failed")
+      return None
+
+  def quarterly_filing(self, cik, year, quarter):
+    url = f'https://data.sec.gov/submissions/CIK{cik}.json'
+    r = requests.get(url, headers=self.headers)
+
+    if r.status_code == 200:
+
+      accessionNumber = None
+      primaryDocument = None
+
+      file_json = r.json()
+      filings = file_json['filings']['recent']
+
+      accessionNumbers = filings['accessionNumber']
+      primaryDocuments = filings['primaryDocument']
+      filingDates = filings['filingDate']
+      forms = filings['form']
+  
+      for i in range(len(forms)):
+        if forms[i] == '10-Q' and filingDates[i].split('-')[0] == year:
+          accessionNumber = accessionNumbers[i]
+          primaryDocument = primaryDocuments[i]
+          break
+      
+      accessionNumber = accessionNumber.replace('-', '')
+
+      print(f'Accession Number: {accessionNumber}')
+      print(f'Primary Document: {primaryDocument}')
+
+      url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
+
+      print(url)
+
+      r = requests.get(url, headers=self.headers)
+      return r.text
+
+    else:
+      print("Request failed")
+      return None
 
 
 # se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
 
-# # Test
-# print(se.name_to_cik('Apple Inc.'))
-# print(se.ticker_to_cik('AAPL'))
-
-def rewrite_accessionNumber(asscessionNumber):
-  return asscessionNumber.replace('-', '')
-
-
-def annual_filing(cik, year):
-  url = f'https://data.sec.gov/submissions/CIK{cik}.json'
-  headers = {'user-agent': 'MLT NA nathanaeldtesfaye@gmail.com'}
-
-  r = requests.get(url, headers=headers)
-
-
-  if r.status_code == 200:
-
-    accessionNumber = None
-    primaryDocument = None
-
-    filejson = r.json()
-    filings = filejson['filings']['recent']
-
-    accessionNumbers = filings['accessionNumber']
-    primaryDocuments = filings['primaryDocument']
-    forms = filings['form']
- 
-    for i in range(len(forms)):
-      if forms[i] == '10-K' and accessionNumbers[i].split('-')[1] == year[2:]:
-        accessionNumber = accessionNumbers[i]
-        primaryDocument = primaryDocuments[i]
-        break
-    
-    accessionNumber = accessionNumber.replace('-', '')
-
-    print(f'Accession Number: {accessionNumber}')
-    print(f'Primary Document: {primaryDocument}')
-
-    url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
-
-    print(url)
-      
-    r = requests.get(url, headers=headers)
-    return r.text
-
-  else:
-    print("Request failed")
-    return None
-    
-      
 # Test
-annual_filing('0000320193', '2018')
+print(se.name_to_cik('Apple Inc.'))
+print(se.ticker_to_cik('AAPL'))
+print(se.annual_filing('0000320193', '2018'))
+
+
+
+    
+
