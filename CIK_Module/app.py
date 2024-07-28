@@ -111,13 +111,14 @@ class SecEdgar:
     return self.__file_report(cik, year, quarter)
 
 
-se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
+if __name__ == '__main__':
+  se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
 
-# Test
-print(se.name_to_cik('Apple Inc.'))
-print(se.ticker_to_cik('AAPL'))
-annualDocument = se.annual_filing('0000320193', '2018')
-quarterlyDocument = se.quarterly_filing('0000320193', '2023', 'Q2')
+  # Test
+  print(se.name_to_cik('Apple Inc.'))
+  print(se.ticker_to_cik('AAPL'))
+  annualDocument = se.annual_filing('0000320193', '2018')
+  quarterlyDocument = se.quarterly_filing('0000320193', '2023', 'Q2')
 
 
 
