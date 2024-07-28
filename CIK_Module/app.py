@@ -13,9 +13,6 @@ class SecEdgar:
 
     self.file_json = r.json()
 
-    print(r.text)
-    print(self.file_json)
-
     self.cik_json_to_dict()
 
 
@@ -47,31 +44,53 @@ class SecEdgar:
       print("Ticker not in dictionary")
       return None
     
+  def quarter_helper(self, quarter, month):
+    quarter = quarter.lower()
+
+    if quarter == 'q1':
+      return month == '03' or month == '04' or month == '05'
+    elif quarter == 'q2':
+      return month == '06' or month == '07' or month == '08'
+    elif quarter == 'q3':
+      return month == '09' or month == '10' or month == '11'
+    elif quarter == 'q4':
+      return month == '12' or month == '01' or month == '02'
+    else:
+      return False
+
+
+    
+  def filing_helper(self, file_json, year, quarter = None):
+    filings = file_json['filings']['recent']
+
+    accessionNumbers = filings['accessionNumber']
+    primaryDocuments = filings['primaryDocument']
+    filingDates = filings['filingDate']
+    primaryDocDescriptions = filings['primaryDocDescription']
+
+    for i in range(len(primaryDocDescriptions)):
+      if quarter:
+        if primaryDocDescriptions[i] == '10-Q' and filingDates[i].split('-')[0] == year and self.quarter_helper(quarter, filingDates[i].split('-')[1]):
+          accessionNumber = accessionNumbers[i].replace('-', '')
+          primaryDocument = primaryDocuments[i]
+          return accessionNumber, primaryDocument
+      else:
+        if primaryDocDescriptions[i] == '10-K' and filingDates[i].split('-')[0] == year:
+          accessionNumber = accessionNumbers[i].replace('-', '')
+          primaryDocument = primaryDocuments[i]
+          return accessionNumber, primaryDocument
+      
+    
+      
+    
   def annual_filing(self, cik, year):
     url = f'https://data.sec.gov/submissions/CIK{cik}.json'
     r = requests.get(url, headers=self.headers)
 
-
     if r.status_code == 200:
 
-      accessionNumber = None
-      primaryDocument = None
-
       file_json = r.json()
-      filings = file_json['filings']['recent']
-
-      accessionNumbers = filings['accessionNumber']
-      primaryDocuments = filings['primaryDocument']
-      filingDates = filings['filingDate']
-      forms = filings['form']
-
-      for i in range(len(forms)):
-        if forms[i] == '10-K' and filingDates[i].split('-')[0] == year:
-          accessionNumber = accessionNumbers[i]
-          primaryDocument = primaryDocuments[i]
-          break
-      
-      accessionNumber = accessionNumber.replace('-', '')
+      accessionNumber, primaryDocument = self.filing_helper(file_json, year)
 
       print(f'Accession Number: {accessionNumber}')
       print(f'Primary Document: {primaryDocument}')
@@ -93,27 +112,8 @@ class SecEdgar:
 
     if r.status_code == 200:
 
-      accessionNumber = None
-      primaryDocument = None
-
       file_json = r.json()
-      filings = file_json['filings']['recent']
-
-      accessionNumbers = filings['accessionNumber']
-      primaryDocuments = filings['primaryDocument']
-      filingDates = filings['filingDate']
-      forms = filings['form']
-  
-      for i in range(len(forms)):
-        if forms[i] == '10-Q' and filingDates[i].split('-')[0] == year:
-          accessionNumber = accessionNumbers[i]
-          primaryDocument = primaryDocuments[i]
-          break
-      
-      accessionNumber = accessionNumber.replace('-', '')
-
-      print(f'Accession Number: {accessionNumber}')
-      print(f'Primary Document: {primaryDocument}')
+      accessionNumber, primaryDocument = self.filing_helper(file_json, year, quarter)
 
       url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
 
@@ -127,12 +127,13 @@ class SecEdgar:
       return None
 
 
-# se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
+se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
 
 # Test
 print(se.name_to_cik('Apple Inc.'))
 print(se.ticker_to_cik('AAPL'))
-print(se.annual_filing('0000320193', '2018'))
+annualDocument = se.annual_filing('0000320193', '2018')
+quarterlyDocument = se.quarterly_filing('0000320193', '2023', 'Q2')
 
 
 
