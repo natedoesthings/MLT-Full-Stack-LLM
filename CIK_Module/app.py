@@ -13,10 +13,10 @@ class SecEdgar:
 
     self.file_json = r.json()
 
-    self.cik_json_to_dict()
+    self.__cik_json_to_dict()
 
-
-  def cik_json_to_dict(self):
+  # Private method to convert the json file to a dictionary
+  def __cik_json_to_dict(self):
     for _, entry in self.file_json.items():
         name = entry['title']
         ticker = entry['ticker']
@@ -44,7 +44,8 @@ class SecEdgar:
       print("Ticker not in dictionary")
       return None
     
-  def quarter_helper(self, quarter, month):
+  # Private Helper Method to determine if a month is in a quarter
+  def __quarter_helper(self, quarter, month):
     quarter = quarter.lower()
 
     if quarter == 'q1':
@@ -59,8 +60,9 @@ class SecEdgar:
       return False
 
 
-    
-  def filing_helper(self, file_json, year, quarter = None):
+  # Private Helper Method to get the filing information needed based on user input
+  # Returns the accession number and primary document
+  def __filing_helper(self, file_json, year, quarter = None):
     filings = file_json['filings']['recent']
 
     accessionNumbers = filings['accessionNumber']
@@ -70,7 +72,7 @@ class SecEdgar:
 
     for i in range(len(primaryDocDescriptions)):
       if quarter:
-        if primaryDocDescriptions[i] == '10-Q' and filingDates[i].split('-')[0] == year and self.quarter_helper(quarter, filingDates[i].split('-')[1]):
+        if primaryDocDescriptions[i] == '10-Q' and filingDates[i].split('-')[0] == year and self.__quarter_helper(quarter, filingDates[i].split('-')[1]):
           accessionNumber = accessionNumbers[i].replace('-', '')
           primaryDocument = primaryDocuments[i]
           return accessionNumber, primaryDocument
@@ -80,51 +82,33 @@ class SecEdgar:
           primaryDocument = primaryDocuments[i]
           return accessionNumber, primaryDocument
       
-    
-      
-    
+  # Private Helper method that returns the html text of the filing
+  def __file_report(self, cik, year, quarter = None):
+    url = f'https://data.sec.gov/submissions/CIK{cik}.json'
+    r = requests.get(url, headers=self.headers)
+
+    if r.status_code == 200:
+
+      file_json = r.json()
+      accessionNumber, primaryDocument = self.__filing_helper(file_json, year, quarter)
+      url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
+
+      print(url)
+
+      r = requests.get(url, headers=self.headers)
+      return r.text
+
+    else:
+      print("Request failed")
+      return None
+  
+  # Method to get the annual filing of a company
   def annual_filing(self, cik, year):
-    url = f'https://data.sec.gov/submissions/CIK{cik}.json'
-    r = requests.get(url, headers=self.headers)
+    return self.__file_report(cik, year)
 
-    if r.status_code == 200:
-
-      file_json = r.json()
-      accessionNumber, primaryDocument = self.filing_helper(file_json, year)
-
-      print(f'Accession Number: {accessionNumber}')
-      print(f'Primary Document: {primaryDocument}')
-
-      url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
-
-      print(url)
-
-      r = requests.get(url, headers=self.headers)
-      return r.text
-
-    else:
-      print("Request failed")
-      return None
-
+  # Method to get the quarterly filing of a company
   def quarterly_filing(self, cik, year, quarter):
-    url = f'https://data.sec.gov/submissions/CIK{cik}.json'
-    r = requests.get(url, headers=self.headers)
-
-    if r.status_code == 200:
-
-      file_json = r.json()
-      accessionNumber, primaryDocument = self.filing_helper(file_json, year, quarter)
-
-      url = f'https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}'
-
-      print(url)
-
-      r = requests.get(url, headers=self.headers)
-      return r.text
-
-    else:
-      print("Request failed")
-      return None
+    return self.__file_report(cik, year, quarter)
 
 
 se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
